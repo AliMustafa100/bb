@@ -17,6 +17,10 @@ class ChessGame {
     this.playerItems = { white: 3, black: 3 };
     this.selectedSpell = null;
     this.selectedItem = null;
+    
+    // Add dice roll tracking
+    this.diceRollUsed = { white: false, black: false };
+    this.lastDiceRoll = null;
 
     this.createBoard();
     this.createSpellAndItemUI();
@@ -75,13 +79,49 @@ class ChessGame {
       </div>
     `;
     
+    // Create dice section
+    const diceSection = document.createElement('div');
+    diceSection.className = 'dice-section';
+    diceSection.innerHTML = `
+      <h3>Dice Roll</h3>
+      <button id="rollDiceBtn" class="dice-btn">Roll Dice</button>
+      <div id="diceResult" class="dice-result">No roll yet</div>
+    `;
+    
     // Insert after the chess board
     const chessBoard = document.getElementById('chessBoard');
     chessBoard.parentNode.insertBefore(spellsSection, chessBoard.nextSibling);
     chessBoard.parentNode.insertBefore(itemsSection, spellsSection.nextSibling);
+    chessBoard.parentNode.insertBefore(diceSection, itemsSection.nextSibling);
     
     // Add event listeners
     this.addSpellAndItemListeners();
+    this.addDiceListener();
+  }
+
+  addDiceListener() {
+    document.getElementById('rollDiceBtn').addEventListener('click', () => {
+      this.rollDice();
+    });
+  }
+
+  rollDice() {
+    if (this.diceRollUsed[this.currentPlayer]) {
+      alert('You have already rolled dice this turn!');
+      return;
+    }
+
+    const roll = Math.floor(Math.random() * 20) + 1;
+    this.lastDiceRoll = roll;
+    this.diceRollUsed[this.currentPlayer] = true;
+    
+    // Update UI
+    document.getElementById('diceResult').textContent = `Rolled: ${roll}`;
+    document.getElementById('rollDiceBtn').disabled = true;
+    
+    alert(`You rolled a ${roll}!`);
+    
+    return roll;
   }
 
   addSpellAndItemListeners() {
@@ -122,17 +162,24 @@ class ChessGame {
       return;
     }
     
-    // Simulate spell casting
-    const roll = Math.floor(Math.random() * 20) + 1;
+    // Check if dice was rolled this turn
+    if (!this.diceRollUsed[this.currentPlayer] || this.lastDiceRoll === null) {
+      alert('You must roll dice first before casting a spell!');
+      return;
+    }
+    
+    const roll = this.lastDiceRoll;
     const minRoll = this.getMinRollForSpell(spellName);
     
+    this.playerSpells[this.currentPlayer]--;
+    
     if (roll < minRoll) {
-      alert(`Spell failed! Rolled ${roll}, needed ${minRoll}+.`);
+      alert(`Spell failed! Rolled ${roll}, needed ${minRoll}+. Spell slot consumed.`);
     } else {
-      this.playerSpells[this.currentPlayer]--;
-      alert(`Spell cast successfully! ${spellName} effect applied.`);
-      this.updateSpellAndItemUI();
+      alert(`Spell cast successfully! ${spellName} effect applied with roll of ${roll}.`);
     }
+    
+    this.updateSpellAndItemUI();
   }
 
   useItem(itemName) {
@@ -146,10 +193,31 @@ class ChessGame {
       return;
     }
     
-    // Simulate item usage
-    const roll = Math.floor(Math.random() * 20) + 1;
-    this.playerItems[this.currentPlayer]--;
-    alert(`Item used! ${itemName} effect applied.`);
+    // Check if item requires a dice roll
+    const itemsRequiringRoll = ['Wontan', 'Invisibility_Potion'];
+    
+    if (itemsRequiringRoll.includes(itemName)) {
+      if (!this.diceRollUsed[this.currentPlayer] || this.lastDiceRoll === null) {
+        alert('You must roll dice first before using this item!');
+        return;
+      }
+      
+      const roll = this.lastDiceRoll;
+      const minRoll = this.getMinRollForItem(itemName);
+      
+      this.playerItems[this.currentPlayer]--;
+      
+      if (roll < minRoll) {
+        alert(`Item failed! Rolled ${roll}, needed ${minRoll}+. Item consumed.`);
+      } else {
+        alert(`Item used successfully! ${itemName} effect applied with roll of ${roll}.`);
+      }
+    } else {
+      // Items that don't require dice rolls
+      this.playerItems[this.currentPlayer]--;
+      alert(`Item used! ${itemName} effect applied.`);
+    }
+    
     this.updateSpellAndItemUI();
   }
 
@@ -164,6 +232,14 @@ class ChessGame {
       'Queens_Soul': 17
     };
     return spellRolls[spellName] || 10;
+  }
+
+  getMinRollForItem(itemName) {
+    const itemRolls = {
+      'Wontan': 17,
+      'Invisibility_Potion': 13
+    };
+    return itemRolls[itemName] || 10;
   }
 
   updateSpellAndItemUI() {
@@ -557,8 +633,16 @@ class ChessGame {
       capturedPiece: capturedPiece,
     });
 
-    // Switch players
+    // Switch players and reset dice roll for new turn
     this.currentPlayer = this.currentPlayer === "white" ? "black" : "white";
+    
+    // Reset dice roll state for new turn
+    this.diceRollUsed[this.currentPlayer] = false;
+    this.lastDiceRoll = null;
+    
+    // Update UI
+    document.getElementById('diceResult').textContent = 'No roll yet';
+    document.getElementById('rollDiceBtn').disabled = false;
     
     // Update spell and item UI for new player
     this.updateSpellAndItemUI();
@@ -753,6 +837,14 @@ class ChessGame {
     // Reset spells and items
     this.playerSpells = { white: 3, black: 3 };
     this.playerItems = { white: 3, black: 3 };
+    
+    // Reset dice roll state
+    this.diceRollUsed = { white: false, black: false };
+    this.lastDiceRoll = null;
+    
+    // Reset dice UI
+    document.getElementById('diceResult').textContent = 'No roll yet';
+    document.getElementById('rollDiceBtn').disabled = false;
     
     this.updateUI();
     this.updateSpellAndItemUI();
