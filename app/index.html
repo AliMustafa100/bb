@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boards and Battles</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-info">
+            <h1>Boards and Battles</h1>
+            <div class="current-player">
+                Current Player: <span id="currentPlayer">White</span>
+            </div>
+            <div id="gameStatus" class="game-status">Game in progress</div>
+        </div>
+        
+        <div id="chessBoard"></div>
+        
+        <div class="controls">
+            <button id="resetButton">Reset Game</button>
+        </div>
+        
+        <div class="rules">
+            <h3>Rules</h3>
+            <ol class="list">
+                <li>King can't be revived</li>
+                <li>Spells can only be used by the king</li>
+                <li>Spells can't kill the king</li>
+                <li>Items can be used by any piece</li>
+                <li>Capture the king to win</li>
+                <li>Up to 3 spells or items per turn.</li>
+                <li>Putting the opponent in check ends your turn</li>
+            </ol>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html> 
