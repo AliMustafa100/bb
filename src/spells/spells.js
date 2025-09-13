@@ -47,6 +47,7 @@ const SPELLS = {
       game.frozenSquares = freezeArea;
       game.playerState[game.currentPlayer].freezeDuration = 2;
       return "The area has been frozen.";
+      // 
     }
   },
 
