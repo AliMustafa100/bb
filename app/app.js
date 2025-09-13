@@ -1,4 +1,4 @@
-// Magical Chess Game with Spells and Items
+// Magical Chess Game with Spells and Items - One Roll Per Turn
 class MagicalChessGame {
   constructor() {
     this.board = this.initializeBoard();
@@ -24,6 +24,7 @@ class MagicalChessGame {
     this.barriers = [];
     this.capturedPieces = { white: [], black: [] };
     this.currentDiceRoll = null;
+    this.hasRolledThisTurn = false; // NEW: Track if dice has been rolled this turn
     this.spellsUsedThisTurn = 0;
     this.itemsUsedThisTurn = 0;
     this.selectedSpell = null;
@@ -65,7 +66,6 @@ class MagicalChessGame {
           
           const randomPiece = enemyPieces[Math.floor(Math.random() * enemyPieces.length)];
           game.capturePieceAt(randomPiece.row, randomPiece.col);
-          game.endTurn();
           return "Thunder struck an enemy piece!";
         }
       },
@@ -169,7 +169,6 @@ class MagicalChessGame {
           
           const target = enemyPieces[Math.floor(Math.random() * enemyPieces.length)];
           game.capturePieceAt(target.row, target.col);
-          game.endTurn();
           return "Stabbed an enemy piece!";
         }
       },
@@ -259,8 +258,8 @@ class MagicalChessGame {
         name: "Skip",
         description: "End your turn without making a move.",
         effect: (game) => {
-          game.endTurn();
-          return "Move skipped";
+          game.endTurnManually();
+          return "Turn ended";
         }
       },
       Lucky_Coin: {
@@ -394,13 +393,23 @@ class MagicalChessGame {
 
   updateDiceButton() {
     const diceButton = document.getElementById('rollDiceButton');
-    if (this.selectedSpell || this.selectedItem) {
+    
+    // Check if dice can be rolled
+    const canRoll = !this.hasRolledThisTurn && (this.selectedSpell || this.selectedItem);
+    
+    if (canRoll) {
       diceButton.style.display = 'block';
+      diceButton.disabled = false;
       diceButton.textContent = this.selectedSpell ? 
         `Roll for ${this.selectedSpell.replace(/_/g, ' ')}` : 
         `Roll for ${this.selectedItem.replace(/_/g, ' ')}`;
+    } else if (this.hasRolledThisTurn) {
+      diceButton.style.display = 'block';
+      diceButton.disabled = true;
+      diceButton.textContent = 'Already rolled this turn';
     } else {
       diceButton.style.display = 'none';
+      diceButton.disabled = false;
     }
   }
 
@@ -413,7 +422,7 @@ class MagicalChessGame {
         card.classList.add("selected");
       }
       
-      if (this.spellsUsedThisTurn >= 3) {
+      if (this.spellsUsedThisTurn >= 3 || this.hasRolledThisTurn) {
         card.classList.add("disabled");
       }
     });
@@ -428,19 +437,45 @@ class MagicalChessGame {
         card.classList.add("selected");
       }
       
-      if (this.itemsUsedThisTurn >= 3) {
+      if (this.itemsUsedThisTurn >= 3 || this.hasRolledThisTurn) {
         card.classList.add("disabled");
       }
     });
   }
 
   rollDice() {
-    const roll = Math.floor(Math.random() * 20) + 1;
-    this.currentDiceRoll = roll;
+    // Prevent multiple rolls per turn
+    if (this.hasRolledThisTurn) {
+      this.showDiceResult("Already rolled this turn!", 'failure');
+      return;
+    }
+
+    // Handle Rage spell (roll twice, take higher)
+    let roll;
+    if (this.playerState[this.currentPlayer].rageTurns > 0) {
+      const roll1 = Math.floor(Math.random() * 20) + 1;
+      const roll2 = Math.floor(Math.random() * 20) + 1;
+      roll = Math.max(roll1, roll2);
+      this.playerState[this.currentPlayer].rageTurns--;
+      
+      const diceResult = document.getElementById("diceResult");
+      diceResult.textContent = `🎲 Rage Roll: ${roll1}, ${roll2} → ${roll}`;
+    } else {
+      roll = Math.floor(Math.random() * 20) + 1;
+      
+      const diceResult = document.getElementById("diceResult");
+      diceResult.textContent = `🎲 Rolled: ${roll}`;
+    }
     
-    const diceResult = document.getElementById("diceResult");
-    diceResult.textContent = `🎲 Rolled: ${roll}`;
+    this.currentDiceRoll = roll;
+    this.hasRolledThisTurn = true; // Mark that dice has been rolled
+    
     diceResult.className = "dice-result show";
+    
+    // Update UI to show dice has been used
+    this.updateDiceButton();
+    this.updateSpellsUI();
+    this.updateItemsUI();
     
     // Auto-use selected spell/item
     if (this.selectedSpell) {
@@ -612,11 +647,12 @@ class MagicalChessGame {
     return this.barriers.some(barrier => barrier.row === row && barrier.col === col);
   }
 
-  endTurn() {
+  endTurnManually() {
     this.currentPlayer = this.currentPlayer === "white" ? "black" : "white";
     this.spellsUsedThisTurn = 0;
     this.itemsUsedThisTurn = 0;
     this.currentDiceRoll = null;
+    this.hasRolledThisTurn = false; // Reset dice roll for new turn
     this.selectedSpell = null;
     this.selectedItem = null;
     this.updateUI();
@@ -902,12 +938,19 @@ class MagicalChessGame {
       captured: capturedPiece,
     });
 
+    // Reset turn state and switch players
     this.currentPlayer = this.currentPlayer === "white" ? "black" : "white";
+    this.spellsUsedThisTurn = 0;
+    this.itemsUsedThisTurn = 0;
+    this.currentDiceRoll = null;
+    this.hasRolledThisTurn = false; // Reset dice roll for new turn
+    this.selectedSpell = null;
+    this.selectedItem = null;
 
     this.checkGameStatus();
-
     this.updateBoardDisplay();
     this.updateUI();
+    this.updateDiceButton();
   }
 
   updateCastlingRights(piece, fromRow, fromCol, toRow, toCol) {
@@ -1080,6 +1123,7 @@ class MagicalChessGame {
     this.barriers = [];
     this.capturedPieces = { white: [], black: [] };
     this.currentDiceRoll = null;
+    this.hasRolledThisTurn = false; // Reset dice roll state
     this.spellsUsedThisTurn = 0;
     this.itemsUsedThisTurn = 0;
     this.selectedSpell = null;
